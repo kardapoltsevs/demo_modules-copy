@@ -1,0 +1,52 @@
+
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345678
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d  # подключаем папку с SQL-скриптами
+    networks:
+      - app-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user/Dockerfile
+    container_name: user-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/userdb
+      SPRING_CONFL_URL: http://confl-service:8083
+    ports:
+      - "8080:8080"  # внешний:внутренний порт
+    depends_on:
+      - postgres
+      - confl-service
+    networks:
+      - app-network
+
+  confl-service:
+    build:
+      context: .
+      dockerfile: confl/Dockerfile
+    container_name: confl-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/confldb
+    ports:
+      - "8081:8083"  # внешний:внутренний порт
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+volumes:
+  postgres_data:
