@@ -2,7 +2,9 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.0'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'war'
 }
+
 group 'com.example'
 version '0.0.1-SNAPSHOT'
 java {
@@ -16,9 +18,16 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.projectlombok:lombok:1.18.22'
     implementation 'org.postgresql:postgresql'
+    // GWT зависимости
+    implementation 'com.google.gwt:gwt-servlet:2.10.0'
+    implementation 'com.google.gwt:gwt-user:2.10.0'
+    // Для межсервисного взаимодействия
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
     implementation project(':confl')
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
@@ -26,6 +35,34 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     runtimeOnly 'org.postgresql:postgresql'
+}
+sourceSets {
+    main {
+        java {
+            srcDir 'src/main/java'
+            srcDir 'src/main/java-client' // GWT клиентский код
+        }
+    }
+}
+task gwtCompile(type: JavaExec) {
+    dependsOn compileJava
+    main = 'com.google.gwt.dev.Compiler'
+    classpath {
+        sourceSets.main.java.srcDirs
+        sourceSets.main.runtimeClasspath
+    }
+    args = [
+            'com.yourpackage.client.YourApp', // GWT entry point
+            '-war', 'src/main/webapp',
+            '-logLevel', 'INFO',
+            '-style', 'PRETTY',
+            '-optimize', '9'
+    ]
+    jvmArgs = ['-Xmx1024M']
+}
+war {
+    dependsOn gwtCompile
+    webAppDirectory = file('src/main/webapp')
 }
 test {
     useJUnitPlatform()
